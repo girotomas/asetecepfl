@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag chart</title>
+    <meta charset="utf-8">
+    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js">
+
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>    
+  <div id="chartContainer" style="height: 300px; width: 100%;"></div> 
+  <div   >
+     <form id='myform' onsubmit="myFunction()">
+  t=<select id="tselect" form="carform"></select>
+  T=<select id="Tselect" form="carform"></select>
+</form>
+  </div> 
+    <script src="papaparse.min.js"></script>
+
+    <script type="text/javascript">
+        renderChart=function(datapoints, xmin, xmax){
+
+
+            var chart = new CanvasJS.Chart("chartContainer",
+            {        
+                axisX:{
+                    minimum: xmin,
+                    maximum: xmax
+                },
+                title: {
+                    text: "Try dragging column to reposition dataPoint",
+                },
+                data: [
+                {
+                    type: "line",
+                    /*dataPoints: [
+                    { x: 10, y: 71 },
+                    { x: 20, y: 55 },
+                    { x: 30, y: 50 },
+                    { x: 40, y: 65 },
+                    { x: 50, y: 95 },
+                    { x: 60, y: 68 },
+                    { x: 70, y: 28 },
+                    { x: 80, y: 34 },
+                    { x: 90, y: 14 }
+                    ]*/
+
+                    dataPoints:datapoints
+                }                   
+                ]
+            });
+
+            chart.render();
+
+            var xSnapDistance = 5;
+            var ySnapDistance = 100;
+
+            var xValue, yValue;
+
+            var mouseDown = false;
+            var selected = null;
+            var changeCursor = false;
+            
+            var timerId = null;
+
+            function getPosition(e) {
+                var parentOffset = $("#chartContainer > .canvasjs-chart-container").offset();          	
+                var relX = e.pageX - parentOffset.left;
+                var relY = e.pageY - parentOffset.top;
+                xValue = Math.round(chart.axisX[0].convertPixelToValue(relX));
+                yValue = Math.round(chart.axisY[0].convertPixelToValue(relY));
+            }
+            
+            function searchDataPoint() {
+                var dps = chart.data[0].dataPoints;
+                //console.log('dps',dps);
+                for(var i = 0; i < dps.length; i++ ) {
+                    //console.log(xValue,yValue,dps[i].x ,dps[i].x- xSnapDistance);
+                    if( (xValue >= dps[i].x - xSnapDistance && xValue <= dps[i].x + xSnapDistance) && 
+                    (yValue >= dps[i].y - ySnapDistance && yValue <= dps[i].y + ySnapDistance) ) {
+                        if(mouseDown) {
+                            selected = i;
+                            break;
+                        }
+                        else {
+                            changeCursor = true;
+                            break; 
+                        }
+                    } else {
+                        selected = null;
+                        changeCursor = false;
+                    }
+                }
+
+            }
+
+            jQuery("#chartContainer > .canvasjs-chart-container").on({
+                mousedown: function(e) {
+                    mouseDown = true;
+                    getPosition(e);  
+                    searchDataPoint();
+                },
+                mousemove: function(e) {
+                    getPosition(e);
+                    if(mouseDown) {
+                        clearTimeout(timerId);
+                        timerId = setTimeout(function(){
+                            if(selected != null) {
+                                chart.data[0].dataPoints[selected].y = yValue;
+                                chart.render();
+                            }   
+                        }, 0);
+                    }
+                    else {
+                        searchDataPoint();
+                        if(changeCursor) {
+                            chart.data[0].set("cursor", "n-resize");
+                        } else {
+                            chart.data[0].set("cursor", "default");
+                        }
+                    }
+                },
+                mouseup: function(e) {
+                    if(selected != null) {
+                        chart.data[0].dataPoints[selected].y = yValue;
+                        console.log('changed:'+yValue);
+                        chart.render();
+                        onMouseUp();
+                        mouseDown = false;
+
+
+                    }
+                }
+            });
+        }
+
+
+
+        var parsedResults=null;
+
+        var selectedResults=null;
+
+        onMouseUp=function(){
+            var xhr = new XMLHttpRequest();
+                    xhr.open('POST','https://us-central1-sensoractivity-1368f.cloudfunctions.net/function-1')
+                      xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+                      t=document.getElementById('tselect').value;
+                      T=document.getElementById('Tselect').value;
+                      data={'t':t,'T':T,'options':parsedResults[t][T]};
+                      // send the collected data as JSON
+                      xhr.send(JSON.stringify(data)); //JSON.stringify(data)
+
+                    xhr.onreadystatechange = function () {
+                      if(xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                          console.log(JSON.parse(xhr.responseText.replace(/'/g, '"')));
+                        } else {
+                          console.error(xhr.statusText);
+                        }
+                      }
+                    };
+                      xhr.onloadend = function () {
+                        //console.log(xhr.response);
+                      };
+                    console.log('mouseup message sent with data',data);
+        }
+
+        assign= function(i,object){
+            if(i[5]!=0 && i[2]<=1.5*i[12] && 0.5*i[12]<=i[2] && i[10]!=0) {
+                // put call indicator -> i[3]
+                if(!(i[2] in object[i[0]][i[1]])) object[i[0]][i[1]][i[2]]={};
+                if(i[3]==1) object[i[0]][i[1]][i[2]].call={'bid':i[10],'ask':i[11],'interest':i[4],'St':i[12],'vol':i[5]};
+                if(i[3]==-1) object[i[0]][i[1]][i[2]].put={'bid':i[10],'ask':i[11],'interest':i[4],'St':i[12],'vol':i[5]};
+            }
+        }
+        parseResults=function(results){
+            var object={};
+                 for (var i in results.data){
+                    i=results.data[i];
+                    if(i[0] in object){
+                        if(i[1] in object[i[0]]){
+                            assign(i,object);
+                        }
+                        else{
+                            object[i[0]][i[1]]= {};
+                            assign(i,object);
+                        }
+                    }
+                    else{
+                        object[i[0]]= { };
+                        object[i[0]][i[1]]={};
+                        assign(i,object);
+                    }
+                 }
+                 parsedResults=object;
+                 return(object);
+        }
+
+
+        changeUiWithResults= function(parsedResults){
+            var x = document.getElementById("tselect");
+            console.log(parsedResults);
+            times=Object.keys(parsedResults);
+            for(var i in times){
+                var option = document.createElement("option");
+                option.text = times[i];
+                x.add(option);
+            }
+            document.getElementById("tselect").addEventListener("change", ()=> tselected(parsedResults));
+        }
+
+        Tselected=function(){
+            var T = document.getElementById("Tselect").value;
+            var t = document.getElementById("tselect").value;
+            selectedResults={'t':t,'T':T,'options':parsedResults[t][T]};
+            console.log('selectedResults',selectedResults);
+            strikes=Object.keys(selectedResults.options);
+            datapoints= strikes.map((value)=>({x:Number.parseFloat(value),y:(Math.floor(Math.random() * 10) + 1)}));
+            xmin=Math.min.apply(null,strikes);
+            xmax=Math.max.apply(null,strikes);
+            renderChart(datapoints, xmin,xmax);
+        }
+        tselected=function(){
+            var x = document.getElementById("Tselect");
+            console.log('tselected');
+            value=document.getElementById("tselect").value;
+            console.log(value);
+            times=Object.keys(parsedResults[value]);
+            for(var i in times){
+                var option = document.createElement("option");
+                option.text = times[i];
+                x.add(option);
+            }
+            document.getElementById("Tselect").addEventListener("change", Tselected);
+        }
+
+        Papa.parse('./SPX_15.csv', {
+            download: true,
+            complete: function(results) {
+                console.log(results);
+                console.log(results.data[0]);   
+                parsedResults=parseResults(results);
+                console.log(parsedResults);
+                changeUiWithResults(parsedResults);
+
+            }
+        }); 
+
+    </script>
+
+</body>
+</html>
