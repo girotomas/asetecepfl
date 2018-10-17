@@ -22,163 +22,41 @@
     <p id='result'></p>
   </div>
     <script src="papaparse.min.js"></script>
-
+    <script src='./MyChart.js'></script>
     <script type="text/javascript">
-        renderChart=function(datapoints, xmin, xmax){
+        
+
+        var myChart=null;
 
 
-            var chart = new CanvasJS.Chart("chartContainer",
-            {        
-                axisX:{
-                    minimum: xmin,
-                    maximum: xmax
-                },
-                axisY:{
-                    minimum: 0,
-                    maximum:3000
-                },
-                title: {
-                    text: "Try dragging column to reposition dataPoint",
-                },
-                data: [
-                {
-                    type: "line",
-                    /*dataPoints: [
-                    { x: 10, y: 71 },
-                    { x: 20, y: 55 },
-                    { x: 30, y: 50 },
-                    { x: 40, y: 65 },
-                    { x: 50, y: 95 },
-                    { x: 60, y: 68 },
-                    { x: 70, y: 28 },
-                    { x: 80, y: 34 },
-                    { x: 90, y: 14 }
-                    ]*/
-
-                    dataPoints:datapoints
-                }                   
-                ]
-            });
-
-            chart.render();
-
-            var xSnapDistance = 5;
-            var ySnapDistance = 100;
-
-            var xValue, yValue;
-
-            var mouseDown = false;
-            var selected = null;
-            var changeCursor = false;
-            
-            var timerId = null;
-
-            function getPosition(e) {
-                var parentOffset = $("#chartContainer > .canvasjs-chart-container").offset();          	
-                var relX = e.pageX - parentOffset.left;
-                var relY = e.pageY - parentOffset.top;
-                xValue = Math.round(chart.axisX[0].convertPixelToValue(relX));
-                yValue = Math.round(chart.axisY[0].convertPixelToValue(relY));
-            }
-            
-            function searchDataPoint() {
-                var dps = chart.data[0].dataPoints;
-                //console.log('dps',dps);
-                for(var i = 0; i < dps.length; i++ ) {
-                    //console.log(xValue,yValue,dps[i].x ,dps[i].x- xSnapDistance);
-                    if( (xValue >= dps[i].x - xSnapDistance && xValue <= dps[i].x + xSnapDistance) && 
-                    (yValue >= dps[i].y - ySnapDistance && yValue <= dps[i].y + ySnapDistance) ) {
-                        if(mouseDown) {
-                            selected = i;
-                            break;
-                        }
-                        else {
-                            changeCursor = true;
-                            break; 
-                        }
-                    } else {
-                        selected = null;
-                        changeCursor = false;
-                    }
-                }
-
-            }
-
-            jQuery("#chartContainer > .canvasjs-chart-container").on({
-                mousedown: function(e) {
-                    mouseDown = true;
-                    getPosition(e);  
-                    searchDataPoint();
-                },
-                mousemove: function(e) {
-                    getPosition(e);
-                    if(mouseDown) {
-                        clearTimeout(timerId);
-                        timerId = setTimeout(function(){
-                            if(selected != null) {
-                                chart.data[0].dataPoints[selected].y = yValue;
-                                chart.render();
-                            }   
-                        }, 0);
-                    }
-                    else {
-                        searchDataPoint();
-                        if(changeCursor) {
-                            chart.data[0].set("cursor", "n-resize");
-                        } else {
-                            chart.data[0].set("cursor", "default");
-                        }
-                    }
-                },
-                mouseup: function(e) {
-                    if(selected != null) {
-                        chart.data[0].dataPoints[selected].y = yValue;
-                        console.log('changed:'+yValue+' of ',chart.data[0].dataPoints[selected]);
-                        chart.render();
-                        datapoints=chart.data[0].dataPoints;
-                        onMouseUp();
-                        mouseDown = false;
-
-
-                    }
-                }
-            });
-        }
-
-
-        var datapoints=null;
-        var parsedResults=null;
-
-        var selectedResults=null;
-
-        onMouseUp=function(){
+        onDataChange=function(){
             var xhr = new XMLHttpRequest();
-                    xhr.open('POST','https://us-central1-sensoractivity-1368f.cloudfunctions.net/function-1')
-                      xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-                      // send the collected data as JSON
-                      var problem=createTreatableArrays();
-                      xhr.send(JSON.stringify(problem)); //JSON.stringify(data)
-                        console.log('problem sent');
-                        console.log(''+JSON.stringify(problem));
-                    xhr.onreadystatechange = function () {
-                      if(xhr.readyState === 4) {
-                        if (xhr.status === 200) {
-                          try{
-                            console.log(JSON.parse(xhr.responseText.replace(/'/g, '"')));
-                          }
-                          catch{
-                            console.log('unparsed response:',xhr.responseText)
-                            document.getElementById('result').innerHTML=xhr.responseText;
-                          }
-                        } else {
-                          console.error(xhr.statusText);
-                        }
-                      }
-                    };
-                      xhr.onloadend = function () {
-                        //console.log(xhr.response);
-                      };
+            xhr.open('POST','https://us-central1-sensoractivity-1368f.cloudfunctions.net/function-1')
+              xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+              // send the collected data as JSON
+              var problem=createTreatableArrays();
+              xhr.send(JSON.stringify(problem)); //JSON.stringify(data)
+                console.log('problem sent',JSON.stringify(problem));
+                console.log(''+JSON.stringify(problem));
+
+            xhr.onreadystatechange = function () {
+              if(xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                  try{
+                    console.log('setting price',Number.parseFloat(xhr.responseText))
+                    chart.setPrice(Number.parseFloat(xhr.responseText));
+                  }
+                  catch{
+                    console.log('unparsed response:',xhr.responseText)
+                    document.getElementById('result').innerHTML=xhr.responseText;
+                  }
+                } else {
+                  console.error(xhr.statusText);
+                }
+              }
+            };
         }
+
 
         assign= function(i,object){
             /*
@@ -225,9 +103,9 @@
             console.log('selected Results data= ',selectedResults);
             var data=selectedResults;
             var options= data.options;
-            var strikes= Object.keys(options);
-            strikes.pop();
-            var N= strikes.length;
+            var chartData=chart.getSelectedData();
+            var strikes= chartData.map((value)=>{return value.x;});
+            var N=strikes.length-2;
             var St=Number.parseFloat(selectedResults.St);
             var CA=zeros(N);
             var CB=zeros(N);
@@ -246,9 +124,8 @@
             var K=zeros(N+2);
             K[0]=St*0.5;
             K[N+1]=St*1.5;
-            for (var i=1;i<N+1;i++) K[i]=Number.parseFloat(strikes[i-1]);
-            var fK=zeros(N+2);
-            for (var i=0;i<N+2;i++) fK[i]=Number.parseFloat(datapoints[i].y);
+            for (var i=1;i<N+1;i++) K[i]=strikes[i+1];
+            var fK=chartData.map((value)=>{return value.y;});
             return {'St':St,'CA':CA,'CB':CB,'PA':PA,'PB':PB,'K':K,'fK':fK};
         }
 
@@ -266,7 +143,6 @@
             document.getElementById("Tselect").addEventListener("change", Tselected);
             tselected();
             Tselected();
-            onMouseUp();
         }
 
         setSelectedResults= function(t,T){
@@ -280,15 +156,33 @@
         renderChartWithSelecedResults=function(){
             strikes=Object.keys(selectedResults.options);
             strikes.pop();
+            strikes=strikes.map((value)=>{return Number.parseFloat(value)});
             St=selectedResults.St;
-            datapoints= strikes.map((value)=>({x:Number.parseFloat(value),y:St})); //(Math.floor(Math.random() * 10) + 1)
 
+            datapoints= strikes.map((value)=>({x:Number.parseFloat(value),y:St})); //(Math.floor(Math.random() * 10) + 1)
             xmin=Math.floor(St*0.5)-10;
             xmax=Math.floor(St*1.5)+10;
             datapoints.unshift({x:Math.floor(St*0.5),y:Math.floor(St)});
             datapoints.push({x:Math.floor(St*1.5),y:Math.floor(St)});
             console.log('datapoints',datapoints);
-            renderChart(datapoints, xmin,xmax);
+            //  MyChart(possibleStrikes,price, initialX,initialY, onDataChage)
+            
+            var initialX=[   strikes[0],
+                                strikes[10],
+                                strikes[20],
+                                strikes[strikes.length-1]   ];
+            var initialY=[   strikes[0],
+                                strikes[10],
+                                strikes[20],
+                                strikes[strikes.length-1]];
+            console.log('initialX',initialX.join(),'initialY',initialY.join());
+            console.log('strikes',strikes);
+            chart=new MyChart(strikes,
+                            1000,
+                            initialX,
+                            initialY,
+                            onDataChange);
+            onDataChange();
         }
 
 
@@ -313,13 +207,10 @@
 
         Papa.parse('./SPX_15.csv', {
             download: true,
-            complete: function(results) {
-                console.log(results);
-                console.log(results.data[0]);   
+            complete: function(results) {  
                 parsedResults=parseResults(results);
-                console.log(parsedResults);
+                console.log('parsed file',parsedResults);
                 changeUiWithResults(parsedResults);
-
             }
         }); 
 

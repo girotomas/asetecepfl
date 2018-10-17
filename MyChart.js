@@ -1,9 +1,10 @@
  
 /*
 
-create  an object ---> mychart=new MyChart(possibleStrikes, price, initialX, initialY)
+create  an object ---> mychart=new MyChart(possibleStrikes, price, initialX, initialY, onDataChange)
                                             ^ array: [10,20,30,40,50,60,70,80,90]
                                             initialX, initialY -> arrays of same size.
+                                            onDataChange -> callback function called onDataChange
 
 This class handles the canvasjs drawn.
 
@@ -21,7 +22,7 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
 */
 
 
- MyChart=function(possibleStrikes,price, initialX,initialY){
+ MyChart=function(possibleStrikes,price, initialX,initialY, onDataChage){
             
 
             
@@ -46,7 +47,7 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
                     type: "line",
                     dataPoints: [
                     { x: -1000, y: this.price },
-                    { x: 20000, y: this.price },
+                    { x: 60000, y: this.price },
                     { x: 50000, y: this.price }
                    
                     ]
@@ -107,7 +108,11 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
                         timerId = setTimeout(function(){
                             if(selected != null) {
                                 that.chart.data[0].dataPoints[selected].y = yValue;
-                                that.chart.data[0].dataPoints[selected].x= getCloserStrike(xValue);
+                                var closerStrike=getCloserStrike(xValue);
+                                console.log('indexOf point',selected);
+                                if(selected!=0 && selected!=initialX.length-1) {
+                                         that.chart.data[0].dataPoints[selected].x= getCloserStrike(xValue);
+                                }
                                 that.chart.render();
                             }   
                         }, 0);
@@ -122,6 +127,7 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
                     }
                 },
                 mouseup: function(e) {
+                    onDataChage();
                     if(selected != null) {
                         that.chart.data[0].dataPoints[selected].y = yValue;
                         that.chart.render();
@@ -150,10 +156,11 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
             this.setPrice=function (price) {
                 that.chart.options.data[1].dataPoints=[
                     { x: -10, y: price },
-                    { x: 2000, y: price },
+                    { x: 6000, y: price },
                     { x: 5000, y: price }
                     ];
                 this.price=price;
+                this.includeInY(price);
             }
 
             this.getSelectedData=function(){
@@ -169,7 +176,18 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
                 this.chart.options.axisY={minimum:xmin,maximum:xmax};
             }
 
+            this.includeInY=function(y){
+                console.log(this.chart.options.axisY.minimum,this.chart.options.axisY.maximum);
+                            if(y<this.chart.options.axisY.minimum) this.setYlim(y-30,this.chart.options.axisY.maximum);
+                            if(y>this.chart.options.axisY.maximum) this.setYlim(this.chart.options.axisY.minimum,y+30);
+            }
+
             this.setXlim( Math.min.apply(null,initialX)-30, Math.max.apply(null,initialX)+30 );
             this.setYlim( Math.min.apply(null,initialY)-30, Math.max.apply(null,initialY)+30 );
+            this.includeInY(price);
+
+            
+
+
 
     }
