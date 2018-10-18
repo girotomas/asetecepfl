@@ -23,6 +23,7 @@
   </div>
     <script src="papaparse.min.js"></script>
     <script src='./MyChart.js'></script>
+    <script src='./Calculator.js'></script>
     <script type="text/javascript">
         
 
@@ -116,15 +117,24 @@
                     PB[i]=Number.parseFloat(options[strikes[i]]['put']['bid']);
                     PA[i]=Number.parseFloat(options[strikes[i]]['put']['ask']);
                 }
+                else {
+                    ca=Number.parseFloat(options[strikes[i]]['call']['ask']);
+                    cb=Number.parseFloat(options[strikes[i]]['call']['bid']);
+                    PA[i]=ca-St*(1-0.001)+strikes[i]*1.1;
+                    PB[i]=cb-St*(1+0.001)+strikes[i];
+                }
                 if ( 'call' in options[strikes[i]]) {
                     CB[i]=Number.parseFloat(options[strikes[i]]['call']['bid']);
                     CA[i]=Number.parseFloat(options[strikes[i]]['call']['ask']);
                 }
+                else {
+                    pa=Number.parseFloat(options[strikes[i]]['put']['ask']);
+                    pb=Number.parseFloat(options[strikes[i]]['put']['bid']);
+                    CA[i]=pa+St*(1+0.001)-strikes[i];
+                    CB[i]=pb+St*(1-0.001)-strikes[i]*1.1;
+                }
             }
-            var K=zeros(N+2);
-            K[0]=St*0.5;
-            K[N+1]=St*1.5;
-            for (var i=1;i<N+1;i++) K[i]=strikes[i+1];
+            var K=chartData.map((value)=>{return value.x;});
             var fK=chartData.map((value)=>{return value.y;});
             return {'St':St,'CA':CA,'CB':CB,'PA':PA,'PB':PB,'K':K,'fK':fK};
         }

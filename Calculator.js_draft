@@ -1,0 +1,313 @@
+import flask
+import logging
+import numpy as np
+from scipy.optimize import linprog
+
+def hello_world(request):
+    """Responds to any HTTP request.
+    Args:
+        request (flask.Request): HTTP request object.
+    Returns:
+        The response text or any set of values that can be turned into a
+        Response object using
+        `make_response <http://flask.pocoo.org/docs/0.12/api/#flask.Flask.make_response>`.
+    """
+    if (request.method == 'OPTIONS'):
+        resp = flask.Response("")
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Headers']="Origin, X-Requested-With, Content-Type, Accept"
+        return resp
+    logging.warn(request.json)
+    request_json = request.get_json(force=True)
+    res=calculateJson(request_json)
+    res=str(res)
+    print(res)
+    resp = flask.Response(res)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Headers']="Origin, X-Requested-With, Content-Type, Accept"
+    # Return the response 
+    return resp
+
+    // 14h30;
+
+calculate=function(CA,CB,PA,PB,K,fK,St,rplus, rminus, spread){
+    // Variable creation
+    zeros=function(n){
+        return Array.apply(null, Array(N)).map(Number.prototype.valueOf,0);
+    }
+    N=CA.length;
+    theta=zeros(N+1);
+    for(var i=0;i++;i<N+1){
+        theta[i]=(fK[i+1]-fK[i])/(K[i+1]-K[i]);
+    }
+    SA=St*(1+spread);
+    SB=St*(1-spread);
+
+
+    // Verification of no arbitrage contidions
+    for (var i=0;i++; i<N){
+        if (CA[i] - PB[i] < SB - K[i] * (1 - rplus)){
+            console.log('ask arbitrage violated');
+            CA[i] = 1.1 * (SB - K[i] * (1 - rplus) + PB[i]);
+        }
+        if (CB[i] - PA[i] > SA - K[i] * (1 - rminus)){
+            console.log('bid arbitrage violated');
+            CB[i]=0.9 * (SA - K[i] * (1 - rminus) + PA[i]);
+        }
+    }
+
+
+    // definition of c
+    var array=[1-rplus,-(1-rminus),SA,-SB];
+    for (var i=0;i++;i<N)   array.concat([CA[i],-CB[i],PA[i],-PB[i]]);
+    c=array;
+
+
+
+
+    // definition of a
+    Array=[];
+    array=[0,0,1,-1];
+    for (var i=0;i++;i<N){
+        array.concat([0,0,-1,1]);
+    }
+
+    Array.concat([array]);
+    
+    array=[1,-1,0,0];
+    for (var i=0;i++;i<N){
+        array+=[0,0,K[i],-K[i]];
+    }
+    Array.concat([array]);
+
+    for (var i=0;i++;i<N){
+        array=zeros(4*N+4);
+        array[4+i*4]=1;
+        array[5+i*4]=-1;
+        array[6+i*4]=1;
+        array[7+i*4]=-1;
+        Array.concat([array]);
+    }
+    a=Array;
+
+
+
+
+
+
+    // definition of D
+    array=[theta[0],fK[0]-theta[0]*K[0]]
+    for (var i=0;i++;i<N){
+        array.concat([theta[i+1]-theta[i]]);
+    }
+    D=array;
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+def calculate(CA,CB,PA,PB,K,fK,St,rplus, rminus, spread):
+    """the inputs are numpy arrays
+    CA <- value ask price of calls of K1 to KN
+    """
+    # Variable creation
+    N=len(CA)
+    theta=(fK[1:]-fK[:N+1])/(K[1:]-K[:N+1])
+    SA=St*(1+spread)
+    SB=St*(1-spread)
+    
+    # Verification of no arbitrage contidions
+    for i in range(N):
+        if CA[i] - PB[i] < SB - K[i] * (1 - rplus):
+            print('ask arbitrage violated')
+            CA[i] = 1.1 * (SB - K[i] * (1 - rplus) + PB[i])
+        if CB[i] - PA[i] > SA - K[i] * (1 - rminus):
+            print('bid arbitrage violated')
+            CB[i]=0.9 * (SA - K[i] * (1 - rminus) + PA[i])
+    
+    # definition of c
+    array=[1-rplus,-(1-rminus),SA,-SB]
+    for i in range(N):
+        array+=[CA[i],-CB[i],PA[i],-PB[i]]
+    c=np.array(array)
+
+
+    # definition of a
+    Array=[]
+    array=[0,0,1,-1]
+    for i in range(N):
+        array+=[0,0,-1,1]
+    Array+=[array]
+    
+    array=[1,-1,0,0]
+    for i in range(N):
+        array+=[0,0,K[i],-K[i]]
+    Array+=[array]
+
+    for i in range(N):
+        array=[0]*(4*N+4)
+        array[4+i*4:8+i*4]=[1,-1,1,-1]
+        Array+=[array]
+
+    a=np.matrix(Array)
+    # -end definition of a
+    
+    # definition of D
+    array=[theta[0],fK[0]-theta[0]*K[0]]
+    for i in range(N):
+        array+=[theta[i+1]-theta[i]]
+    D=np.array(array)
+    
+    
+    # computation of the minimum
+    res=linprog(c, method='simplex',A_ub=-np.eye(4*N+4),b_ub=np.zeros(4*N+4),A_eq=a,b_eq=D)
+    return(res)
+
+
+
+    
+    
+def calculate(CA,CB,PA,PB,K,fK,St,rplus, rminus, spread):
+    """the inputs are numpy arrays
+    CA <- value ask price of calls of K1 to KN
+    """
+    # Variable creation
+    N=len(CA)
+    theta=(fK[1:]-fK[:N+1])/(K[1:]-K[:N+1])
+    SA=St*(1+spread)
+    SB=St*(1-spread)
+     
+    # Verification of no arbitrage contidions
+    for i in range(N):
+        if CA[i]-PB[i] < SB-K[i]*(1-rplus):
+            print('ask arbitrage violated')
+            CA[i] = 1.1 * (SB - K[i] * (1 - rplus) + PB[i])
+        if CB[i]-PA[i]>SA-K[i]*(1-rminus):
+            print('bid arbitrage violated')
+            CB[i]=0.9*(SA-K[i]*(1-rminus)+PA[i])
+     
+    # definition of c
+    array=[1-rplus,-(1-rminus),SA,-SB]
+    for i in range(N):
+        array+=[CA[i],-CB[i],PA[i],-PB[i]]
+    c=np.array(array)
+ 
+ 
+    # definition of a
+    Array=[]
+    array=[0,0,1,-1]
+    for i in range(N):
+        array+=[0,0,-1,1]
+    Array+=[array]
+     
+    array=[1,-1,0,0]
+    for i in range(N):
+        array+=[0,0,K[i],-K[i]]
+    Array+=[array]
+ 
+    for i in range(N):
+        array=[0]*(4*N+4)
+        array[4+i*4:8+i*4]=[1,-1,1,-1]
+        Array+=[array]
+ 
+    a=np.matrix(Array)
+    # -end definition of a
+     
+    # definition of D
+    array=[theta[0],fK[0]-theta[0]*K[0]]
+    for i in range(N):
+        array+=[theta[i+1]-theta[i]]
+    D=np.array(array)
+     
+     
+    # computation of the minimum
+    res=linprog(c, method='simplex',A_ub=-np.eye(4*N+4),b_ub=np.zeros(4*N+4),A_eq=a,b_eq=D)
+    return(res)
+ 
+ 
+def subsets(s):
+    sets = []
+    for i in range(1 << len(s)):
+        subset = [s[bit] for bit in range(len(s)) if is_bit_set(i, bit)]
+        sets.append(subset)
+    return sets
+ 
+def is_bit_set(num, bit):
+    return num & (1 << bit) > 0
+ 
+
+
+
+
+
+
+ 
+def NaivePrice(CA, CB, PA, PB, K, fK, St, rplus, rminus, spread):
+    """the inputs are numpy arrays
+    CA <- value ask price of calls of K1 to KN
+    """
+    # Variable creation
+    N = len(CA)
+    theta = (fK[1:] - fK[:N + 1]) / (K[1:] - K[:N + 1])
+    SA = St * (1 + spread)
+    SB = St * (1 - spread)
+ 
+    # Verification of no arbitrage contidions
+    for i in range(N):
+        if CA[i] - PB[i] < SB - K[i] * (1 - rplus):
+            print('ask arbitrage violated')
+            CA[i] = 1.1 * (SB - K[i] * (1 - rplus) + PB[i])
+        if CB[i] - PA[i] > SA - K[i] * (1 - rminus):
+            print('bid arbitrage violated')
+            CB[i] = 0.9 * (SA - K[i] * (1 - rminus) + PA[i])
+ 
+    ss = range(0, N)
+    II = subsets(ss)
+    p_best = 10 ** 6
+    deltaTheta = theta[1:(N+1)] - theta[0:N]
+    deltaThetaplus = deltaTheta * (deltaTheta > 0)
+    deltaThetaminus = deltaTheta * (deltaTheta < 0)
+    thP = deltaThetaplus * PA[ss] + deltaThetaminus * PB[ss]
+    thC = deltaThetaplus * CA[ss] + deltaThetaminus * CB[ss]
+    for I in II:
+        Ic = list(set.difference(set(ss), set(I)))
+        deltaC = np.zeros([1, N])
+        deltaP = deltaC
+        THI = deltaTheta[Ic]
+        KI = K[Ic]
+        beta = theta[0] + sum(THI)
+        b = fK[0] - theta[0] * K[0] - np.dot(THI, KI)
+        pr = (1 - rplus) * max(b, 0) + (1 - rminus) * min(b, 0) + max(beta, 0) * SA + min(beta, 0) * SB
+        pr = pr + sum(thP[Ic]) + sum(thC[I])
+        print(pr)
+        p_best = min(p_best, pr)
+    return p_best
+ 
+ 
+def calculateJson(input):
+    St=input["St"]
+    CA=np.array(input["CA"])
+    CB=np.array(input["CB"])
+    PA=np.array(input["PA"])
+    PB=np.array(input["PB"])
+    K=np.array(input["K"])
+    fK=np.array(input["fK"])
+    print(type(fK))
+    print(np.shape(K))
+    print(np.shape(fK))
+    # return(calculate(CA,CB,PA,PB,K,fK,St,0.01, 0.03, 0.001))
+    return(NaivePrice(CA,CB,PA,PB,K,fK,St,0.01, 0.03, 0.001))
+ 
+calculateJson=function(input){
+
+}
