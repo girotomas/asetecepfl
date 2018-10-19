@@ -18,6 +18,10 @@
 
 </form>
   </div> 
+  <input type="file" id="file-input" />
+<h3>Contents of the file:</h3>
+<pre id="file-content"></pre>
+
   <div>
     <p id='result'></p>
   </div>
@@ -30,7 +34,7 @@
         var myChart=null;
 
 
-        onDataChange=function(){
+        /*onDataChange=function(){
             var xhr = new XMLHttpRequest();
             xhr.open('POST','https://us-central1-sensoractivity-1368f.cloudfunctions.net/function-1')
               xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
@@ -56,6 +60,17 @@
                 }
               }
             };
+        }*/
+
+
+
+        onDataChange=function(){
+            console.log('new');
+            data=createTreatableArrays();
+            console.log('data for calculations',JSON.stringify(data));
+            var price=naivePrice(data);
+            console.log('new price',price);
+            chart.setPrice(price);
         }
 
 
@@ -106,7 +121,9 @@
             var options= data.options;
             var chartData=chart.getSelectedData();
             var strikes= chartData.map((value)=>{return value.x;});
-            var N=strikes.length-2;
+            strikes.pop();
+            strikes.shift();
+            var N=strikes.length;
             var St=Number.parseFloat(selectedResults.St);
             var CA=zeros(N);
             var CB=zeros(N);
@@ -136,7 +153,7 @@
             }
             var K=chartData.map((value)=>{return value.x;});
             var fK=chartData.map((value)=>{return value.y;});
-            return {'St':St,'CA':CA,'CB':CB,'PA':PA,'PB':PB,'K':K,'fK':fK};
+            return {'St':St,'CA':CA,'CB':CB,'PA':PA,'PB':PB,'K':K,'fK':fK,'spread':0.001,'rplus':0.01,'rminus':0.01};
         }
 
 
@@ -177,14 +194,14 @@
             console.log('datapoints',datapoints);
             //  MyChart(possibleStrikes,price, initialX,initialY, onDataChage)
             
-            var initialX=[   strikes[0],
-                                strikes[10],
+            var initialX=[   St*0.5,
+                                strikes[10],strikes[15],
                                 strikes[20],
-                                strikes[strikes.length-1]   ];
-            var initialY=[   strikes[0],
-                                strikes[10],
-                                strikes[20],
-                                strikes[strikes.length-1]];
+                                St*1.5   ];
+            var initialY=[   St,
+                                St,St,
+                                St,
+                                St];
             console.log('initialX',initialX.join(),'initialY',initialY.join());
             console.log('strikes',strikes);
             chart=new MyChart(strikes,
@@ -215,15 +232,46 @@
 
         }
 
-        Papa.parse('./SPX_15.csv', {
+        /*Papa.parse('./SPX_15.csv', {
             download: true,
             complete: function(results) {  
                 parsedResults=parseResults(results);
                 console.log('parsed file',parsedResults);
                 changeUiWithResults(parsedResults);
             }
-        }); 
+        }); */
 
+
+        function readSingleFile(e) {
+          var file = e.target.files[0];
+          if (!file) {
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            var contents = e.target.result;
+            console.log('contents',contents);
+            Papa.parse(contents, {
+                complete: function(results) {  
+                    parsedResults=parseResults(results);
+                    console.log('parsed file',parsedResults);
+                    changeUiWithResults(parsedResults);
+            }
+        });
+            /*=parseResults(contents);
+                console.log('parsed file',parsedResults);
+                changeUiWithResults(parsedResults);*/
+          };
+          reader.readAsText(file);
+        }
+
+        function displayContents(contents) {
+          var element = document.getElementById('file-content');
+          element.textContent = contents;
+        }
+
+        document.getElementById('file-input')
+          .addEventListener('change', readSingleFile, false);
     </script>
 
 </body>

@@ -57,7 +57,7 @@ methods:    --->   setPrice(price)   sets the red bar of the figure
 
             this.chart.render();
 
-            var xSnapDistance = 5;
+            var xSnapDistance = 10;
 
             var xValue, yValue;
 
